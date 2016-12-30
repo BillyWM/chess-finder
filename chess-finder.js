@@ -11,7 +11,7 @@ class Point {
      */
     toAlgebraic() {
         let letter = "abcdefgh"[this.file];
-        let number = 8 - this.rank;
+        let number = this.rank + 1;
 
         return letter + number;
     }
@@ -117,7 +117,7 @@ class Point {
         // Loop while moves are in-bounds
         while (r >= 0 && r <= 7 && f >= 0 && f <= 7) {
 
-            if (r !== this.rank && f !== this.file) {
+            if (!(r === this.rank && f === this.file)) {
                 points.push(new Point(f, r));
             }
 
@@ -319,6 +319,10 @@ class Board {
         this.setPositionFromFEN("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
     }
 
+    setNoPawnsPosition() {
+        this.setPositionFromFEN("rnbqkbnr/8/8/8/8/8/8/RNBQKBNR w KQkq - 0 1");        
+    }
+
     /**
      * Full list of pieces, useful for iterating possible moves
      */
@@ -469,14 +473,33 @@ class Board {
     getpseudoLegalMovesForPiece(piece) {
 
         let pseudoMoves = [];
-        let otherColor;
+        let lineList;
 
         switch (piece.type) {
             case Piece.types.BISHOP:
-                let lineList = piece.getDiagonals();
+                lineList = piece.getDiagonals();
                 pseudoMoves = this.findUnblockedPoints(lineList, piece.color);
-                let stopHere = 12;
+                
+                console.log(`The pseudomoves for the ${piece.color} Bishop on ${piece.square} are:`);
+                pseudoMoves.forEach( x => console.log(x.toAlgebraic()));
+
                 break;
+            case Piece.types.ROOK:
+                lineList = piece.getStraightLines();
+                pseudoMoves = this.findUnblockedPoints(lineList, piece.color);
+
+                console.log(`The pseudomoves for the ${piece.color} Rook on ${piece.square} are:`);
+                pseudoMoves.forEach( x => console.log(x.toAlgebraic()));
+                break;
+
+            case Piece.types.QUEEN:
+                lineList = piece.getAllLines();
+                pseudoMoves = this.findUnblockedPoints(lineList, piece.color);
+
+                console.log(`The pseudomoves for the ${piece.color} Queen on ${piece.square} are:`);
+                pseudoMoves.forEach( x => console.log(x.toAlgebraic()));
+                break;
+
                 
         }
     }
@@ -498,12 +521,16 @@ class Board {
 
                 pieceOnSquare = this.getPieceAtSquare(p.toAlgebraic());
 
-                // Our own color in the way; end of the line
-                if (pieceOnSquare && pieceOnSquare.color === color) {
-                    blockedLine = true;
-                } else if (!pieceOnSquare || (pieceOnSquare.color !== color && pieceOnSquare.type !== Piece.types.KING)) {
-                    // Otherwise, empty squares and captures (except capturing the king) are valid moves
+                // Empty square? Valid pseudomove
+                if (!pieceOnSquare) {
                     validPoints.push(p);
+                } else if (pieceOnSquare && pieceOnSquare.color === color) {
+                    // Our own color in the way; end of the line
+                    blockedLine = true;
+                } else if (pieceOnSquare && pieceOnSquare.color !== color && pieceOnSquare.type !== Piece.types.KING) {
+                    //Captures are valid moves. However, they're the last valid move in the line
+                    validPoints.push(p);
+                    blockedLine = true;
                 }
             }
         }
@@ -529,7 +556,7 @@ class Board {
 
         for (let i = 0; i < 8; i++) {
 
-            rank = 7 - i;
+            rank = i;
             file = 0;
             str = rows[i];
             index = 0;
@@ -582,9 +609,9 @@ class Board {
     }
 }
 
-new Pawn("white");
 let board = new Board();
-board.setInitialPosition();
+//board.setInitialPosition();
+board.setNoPawnsPosition();
 board.getpseudoLegalMoves();
 var x = board.pieces;
 
