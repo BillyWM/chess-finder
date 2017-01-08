@@ -29,7 +29,7 @@ class Piece {
      * @returns {Boolean}
      */
     isOnStartingSquare() {
-        return this.startingSquares[this.color].contains(this.square);
+        return this.startingSquares[this.color].includes(this.square);
     }
 
     getDiagonals() {
@@ -54,7 +54,7 @@ class Piece {
      */
     getPointAhead() {
 
-        let rankAhead = this.color === "black" ? this.point.rank + 1 : this.point.rank - 1;
+        let rankAhead = this.color === "black" ? this.point.rank - 1 : this.point.rank + 1;
         let pointAhead = new Point(this.point.file, rankAhead);
 
         return pointAhead.isValid ? pointAhead : null;
@@ -65,7 +65,7 @@ class Piece {
      * @returns {Point|null}
      */
     getPointTwoAhead() {
-        let rankTwoAhead = this.color === "black" ? this.point.rank + 2 : this.point.rank - 2;
+        let rankTwoAhead = this.color === "black" ? this.point.rank - 2 : this.point.rank + 2;
         let pointAhead = new Point(this.point.file, rankTwoAhead);
 
         return pointAhead.isValid ? pointAhead : null;
@@ -77,7 +77,7 @@ class Piece {
     getPawnAttackPoints() {
 
         // Attack down the board or up?
-        let dy = this.color === "black" ? 1 : -1;
+        let dy = this.color === "black" ? -1 : 1;
         let attackPoints = [];
         let attack1, attack2;
 
@@ -182,6 +182,11 @@ class Pawn extends Piece {
 
         this.type = Piece.types.PAWN;
 
+        this.startingSquares = {
+            black: ["a7", "b7", "c7", "d7", "e7", "f7", "g7", "h7"],
+            white: ["a2", "b2", "c2", "d2", "e2", "f2", "g2", "h2"]
+        }
+
         //TODO: Must be set from outside (in board logic)
         this.isDoubled = false;
     }
@@ -190,14 +195,6 @@ class Pawn extends Piece {
         //TODO: Look at defenders array, return true if any are other pawns
     }
 
-    isOnStartingSquare() {
-
-        // Only check rank for pawns; a pawn can't possibly reach a different file of its starting rank
-        if (this.color === "black" && this.point.rank === 1) return true;
-        if (this.color === "white" && this.point.rank === 6) return true;
-
-        return false;
-    }
 
 }
 

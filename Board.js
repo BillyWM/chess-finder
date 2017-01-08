@@ -1,5 +1,6 @@
 let Point = require("./Point.js");
 let Pieces = require("./Pieces.js");
+let Move = require("./Move.js");
 let Piece = Pieces.Piece;
 let Bishop = Pieces.Bishop;
 let Knight = Pieces.Knight;
@@ -203,6 +204,7 @@ class Board {
      */
     getpseudoLegalMovesForPiece(piece) {
 
+        let pseudoPoints = [];
         let pseudoMoves = [];
         let lineList;
         let pointList;
@@ -210,71 +212,96 @@ class Board {
         switch (piece.type) {
             case Piece.types.BISHOP:
                 lineList = piece.getDiagonals();
-                pseudoMoves = this.findUnblockedPointsOnLine(lineList, piece.color);
-                
-                console.log(`The pseudomoves for the ${piece.color} Bishop on ${piece.square} are:`);
-                pseudoMoves.forEach( x => console.log(x.toAlgebraic()));
-
+                pseudoPoints = this.findUnblockedPointsOnLine(lineList, piece.color);
                 break;
             case Piece.types.ROOK:
                 lineList = piece.getStraightLines();
-                pseudoMoves = this.findUnblockedPointsOnLine(lineList, piece.color);
-
-                console.log(`The pseudomoves for the ${piece.color} Rook on ${piece.square} are:`);
-                pseudoMoves.forEach( x => console.log(x.toAlgebraic()));
+                pseudoPoints = this.findUnblockedPointsOnLine(lineList, piece.color);
                 break;
 
             case Piece.types.QUEEN:
                 lineList = piece.getAllLines();
-                pseudoMoves = this.findUnblockedPointsOnLine(lineList, piece.color);
-
-                console.log(`The pseudomoves for the ${piece.color} Queen on ${piece.square} are:`);
-                pseudoMoves.forEach( x => console.log(x.toAlgebraic()));
+                pseudoPoints = this.findUnblockedPointsOnLine(lineList, piece.color);
                 break;
 
             case Piece.types.KING:
                 pointList = piece.getSurroundingPoints();
-                pseudoMoves = this.findUnblockedPoints(pointList, piece.color, true);
-
-                console.log(`The pseudomoves for the ${piece.color} King on ${piece.square} are:`);
-                pseudoMoves.forEach( x => console.log(x.toAlgebraic()));
+                pseudoPoints = this.findUnblockedPoints(pointList, piece.color, true);
                 break;
 
             case Piece.types.KNIGHT:
                 pointList = piece.getKnightPoints();
-                pseudoMoves = this.findUnblockedPoints(pointList, piece.color, true);
-
-                console.log(`The pseudomoves for the ${piece.color} Knight on ${piece.square} are:`);
-                pseudoMoves.forEach( x => console.log(x.toAlgebraic()));
+                pseudoPoints = this.findUnblockedPoints(pointList, piece.color, true);
                 break;
 
             case Piece.types.PAWN:
-                pointList = this.getPawnPseudoMoves(piece);
-                console.log(`The pseudomoves for the ${piece.color} Pawn on ${piece.square} are:`);
-                pseudoMoves.forEach( x => console.log(x.toAlgebraic()));
+                pseudoPoints = this.getPawnPseudoMoves(piece);
                 break;
-                
         }
+
+        pseudoMoves = pseudoPoints.map( (pt) => {
+            return new Move(piece, piece.point, pt);
+        });
+
+        console.log(pseudoMoves);
+
+        // console.log(`The pseudomoves for the ${piece.color} ${piece.type} on ${piece.square} are:`);
+        // pseudoPoints.forEach( x => console.log(x.toAlgebraic()));
     }
 
     /**
      * Check for forward moves (1 or 2) and possible attacks
-     * TODO: En passant when this information is provided
+     * TODO: En passant when this information is provided externally
+     * 
+     * @param {Pawn} piece
+     * @returns {Point[]}
      */
     getPawnPseudoMoves(piece) {
 
-        let pointList = [];
-        // pointList = pointList.concat(piece.getPointAhead(), piece.getPointTwoAhead());
+        let validPoints = [];
+        let attackPoints = [];
         // getPawnAttackPoints
 
         // Can they move forward one?
+        //      If there is a square in front of them, and it's not occupied
         let pointAhead = piece.getPointAhead();
-        if (pointAhead) pointList.concat(pointAhead);
+        let isPointAheadOccupied = this.isPointOccupied(pointAhead);
 
-        // Can only move forward two on certain ranks
+        if (pointAhead && !isPointAheadOccupied) {
+            validPoints = validPoints.concat(pointAhead);
+        }
 
+        // Can only move forward two in starting position
+        //      (if they can't move one, don't bother to check if they can move two)
+        if (piece.isOnStartingSquare() && !isPointAheadOccupied) {
+            let pointTwoAhead = piece.getPointTwoAhead();
+            if (pointTwoAhead && !this.isPointOccupied(pointTwoAhead)) {
+                validPoints = validPoints.concat(pointTwoAhead);
+            }
+        }
+
+        attackPoints = piece.getPawnAttackPoints();
+        attackPoints = this.findCaptureablePoints(attackPoints, piece.color);
+
+        validPoints = validPoints.concat(attackPoints);
+
+        return validPoints;
 
     }
+
+    findCaptureablePoints(pointList, color) {
+        let validPoints = [];
+
+        for (let i=0; i < pointList.length; i++) {
+            let pieceAtSquare = this.getPieceAtSquare(pointList[i].toAlgebraic());
+            if (pieceAtSquare && pieceAtSquare.color !== color && !pieceAtSquare.isKing) {
+                validPoints.push(pointList[i]);
+            }
+        }
+
+        return validPoints;
+    }
+
 
     /**
      * King is currently in check
@@ -318,6 +345,17 @@ class Board {
      */
     isPseudoStalemated(color) {
 
+    }
+
+    /**
+     * @returns {Boolean}
+     */
+    isPointOccupied(point) {
+        if (!point) return false;
+
+        let pieceOnSquare = this.getPieceAtSquare(point.toAlgebraic());
+
+        return !!pieceOnSquare;
     }
 
     /**
